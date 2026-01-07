@@ -1,0 +1,6 @@
+__pycache__
+.vscode
+.venv
+logs
+perplexity_cookies.json
+*.egg-info

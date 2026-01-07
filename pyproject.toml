@@ -1,0 +1,22 @@
+[project]
+name = "perplexity-web-wrapper"
+version = "0.1.0"
+description = "Unofficial wrapper for Perplexity AI's web interface."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "curl-cffi>=0.11.3",
+    "fastapi>=0.115.12",
+    "mcp>=1.0.0",
+    "uvicorn>=0.34.3",
+    "websocket-client>=1.8.0",
+]
+
+[project.scripts]
+perplexity-mcp = "mcp_server.server:main"
+
+[tool.uv]
+package = true
+
+[tool.setuptools.packages.find]
+include = ["lib*", "api*", "mcp_server*"]
