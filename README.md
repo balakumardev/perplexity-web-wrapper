@@ -2,6 +2,17 @@
 
 Unofficial Python wrapper for Perplexity AI's web interface, providing both a REST API and MCP (Model Context Protocol) server for integration with coding agents.
 
+**Use your existing Perplexity subscription** - no API costs. This wrapper uses your Perplexity web session cookies, so all queries use your existing Pro subscription instead of the paid Perplexity API.
+
+## Why This Wrapper?
+
+| Approach | Cost | Rate Limits |
+|----------|------|-------------|
+| **This wrapper** (web session) | $0 (uses your existing subscription) | Your subscription limits |
+| Perplexity API | $5/1000 requests (sonar), $200/month (pro tier) | API tier limits |
+
+If you already have a Perplexity Pro subscription ($20/month), this wrapper lets you integrate Perplexity into your coding workflow without additional API costs.
+
 ## Overview
 
 This project enables programmatic access to Perplexity AI through:
