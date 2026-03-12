@@ -13,9 +13,7 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-# Add parent directory to path for lib imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from lib.perplexity import Client, normalize_cookies
+from perplexity_subscription_mcp.client import Client, normalize_cookies
 
 # Initialize FastMCP server
 mcp = FastMCP("Perplexity AI")
@@ -28,32 +26,51 @@ def get_client() -> Client:
     """
     Get or create the Perplexity client instance.
 
-    Loads cookies from perplexity_cookies.json in the project root,
-    or from the path specified in PERPLEXITY_COOKIES_PATH env var.
+    Cookie resolution order:
+    1. PERPLEXITY_COOKIES_PATH env var (explicit file path)
+    2. PERPLEXITY_COOKIES env var (inline JSON string)
+    3. ~/.config/perplexity/cookies.json (user config)
+    4. ./perplexity_cookies.json (current working directory)
     """
     global _client
     if _client is None:
         cookies = {}
 
-        # Check project root first
-        project_root = Path(__file__).parent.parent
-        cookies_path = project_root / "perplexity_cookies.json"
-
-        # Fall back to env var if not found in project root
-        if not cookies_path.exists():
-            env_path = os.environ.get("PERPLEXITY_COOKIES_PATH")
-            if env_path:
-                cookies_path = Path(env_path)
-
-        # Load cookies if file exists
-        if cookies_path.exists():
-            try:
-                with open(cookies_path, "r", encoding="utf-8") as f:
-                    cookies = normalize_cookies(json.load(f))
-            except (json.JSONDecodeError, IOError) as e:
-                print(f"Warning: Failed to load cookies from {cookies_path}: {e}", file=sys.stderr)
+        # 1. Explicit path from env var
+        env_path = os.environ.get("PERPLEXITY_COOKIES_PATH")
+        if env_path:
+            cookies_path = Path(env_path).expanduser()
+            if cookies_path.exists():
+                try:
+                    with open(cookies_path, "r", encoding="utf-8") as f:
+                        cookies = normalize_cookies(json.load(f))
+                except (json.JSONDecodeError, IOError) as e:
+                    print(f"Warning: Failed to load cookies from {cookies_path}: {e}", file=sys.stderr)
         else:
-            print("Warning: No cookies file found. Using empty cookies.", file=sys.stderr)
+            # 2. Inline JSON from env var
+            env_json = os.environ.get("PERPLEXITY_COOKIES")
+            if env_json:
+                try:
+                    cookies = normalize_cookies(json.loads(env_json))
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Failed to parse PERPLEXITY_COOKIES: {e}", file=sys.stderr)
+            else:
+                # 3. XDG config directory
+                xdg_path = Path.home() / ".config" / "perplexity" / "cookies.json"
+                # 4. Current working directory
+                cwd_path = Path.cwd() / "perplexity_cookies.json"
+
+                for candidate in [xdg_path, cwd_path]:
+                    if candidate.exists():
+                        try:
+                            with open(candidate, "r", encoding="utf-8") as f:
+                                cookies = normalize_cookies(json.load(f))
+                            break
+                        except (json.JSONDecodeError, IOError) as e:
+                            print(f"Warning: Failed to load cookies from {candidate}: {e}", file=sys.stderr)
+
+        if not cookies:
+            print("Warning: No cookies found. Set PERPLEXITY_COOKIES_PATH or place cookies.json in ~/.config/perplexity/", file=sys.stderr)
 
         _client = Client(cookies)
 

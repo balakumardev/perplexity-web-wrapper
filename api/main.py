@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 
 
 import json
-from lib import perplexity
+from perplexity_subscription_mcp import client as perplexity
 
 from typing import List, Optional
 from datetime import datetime

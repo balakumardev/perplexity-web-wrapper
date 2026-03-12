@@ -1,8 +1,8 @@
-# Perplexity Web Wrapper & MCP Server
+# Perplexity Subscription MCP
 
-Unofficial Python wrapper for Perplexity AI's web interface, providing both a REST API and MCP (Model Context Protocol) server for integration with coding agents.
+Unofficial Python wrapper for Perplexity AI's web interface, providing an MCP (Model Context Protocol) server and Python client for integration with coding agents.
 
-**Use your existing Perplexity subscription** - no API costs. This wrapper uses your Perplexity web session cookies, so all queries use your existing Pro subscription instead of the paid Perplexity API.
+**Use your existing Perplexity subscription** — no API costs. This wrapper uses your Perplexity web session cookies, so all queries use your existing Pro subscription instead of the paid Perplexity API.
 
 ## Why This Wrapper?
 
@@ -13,13 +13,190 @@ Unofficial Python wrapper for Perplexity AI's web interface, providing both a RE
 
 If you already have a Perplexity Pro subscription ($20/month), this wrapper lets you integrate Perplexity into your coding workflow without additional API costs.
 
-## Overview
+## Quick Start
 
-This project enables programmatic access to Perplexity AI through:
+No install needed — your MCP config runs the server via `uvx` automatically.
 
-- **Python Library**: Direct client for searching and managing threads
-- **REST API**: FastAPI server with synchronous and streaming endpoints
-- **MCP Server**: Model Context Protocol integration for AI coding assistants
+> **Prerequisites:** [uv](https://docs.astral.sh/uv/getting-started/installation/) and Python 3.10+
+
+### 1. Get Your Perplexity Cookies
+
+The MCP server authenticates using your browser's Perplexity session cookies. You need to export them once (and re-export when they expire).
+
+#### Option A: Cookie-Editor Extension (Recommended)
+
+1. Install the [Cookie-Editor](https://cookie-editor.com/) browser extension ([Chrome](https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm), [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/))
+2. Go to [perplexity.ai](https://www.perplexity.ai) and **log in** to your account
+3. Click the Cookie-Editor extension icon
+4. Click **Export** (bottom-left) → copies JSON to clipboard
+5. Save the clipboard content to a file:
+   ```bash
+   # Create the config directory
+   mkdir -p ~/.config/perplexity
+
+   # Paste your clipboard into this file
+   # macOS:
+   pbpaste > ~/.config/perplexity/cookies.json
+
+   # Linux:
+   xclip -selection clipboard -o > ~/.config/perplexity/cookies.json
+
+   # Windows (PowerShell):
+   Get-Clipboard | Out-File -Encoding utf8 ~/.config/perplexity/cookies.json
+
+   # Or just create the file manually and paste the JSON content
+   ```
+
+This gives you an array format like:
+```json
+[
+  {"domain": ".perplexity.ai", "name": "__Secure-next-auth.session-token", "value": "eyJ...", ...},
+  {"domain": ".perplexity.ai", "name": "pplx.visitor-id", "value": "...", ...}
+]
+```
+
+#### Option B: Browser DevTools (Manual)
+
+1. Go to [perplexity.ai](https://www.perplexity.ai) and **log in**
+2. Open DevTools (`F12` or `Cmd+Opt+I` / `Ctrl+Shift+I`)
+3. Go to **Application** tab (Chrome) or **Storage** tab (Firefox)
+4. Click **Cookies** → `https://www.perplexity.ai`
+5. Copy cookie names and values into a JSON file:
+
+```json
+{
+  "__Secure-next-auth.session-token": "eyJ...",
+  "pplx.visitor-id": "...",
+  "__cf_bm": "..."
+}
+```
+
+Save as `~/.config/perplexity/cookies.json`.
+
+> **Tip:** Export **all** cookies from perplexity.ai for best results. The essential one is `__Secure-next-auth.session-token`, but exporting everything avoids issues with missing tokens.
+
+Both formats (array from Cookie-Editor and flat object from manual export) are supported automatically.
+
+### 2. Add to Your Coding Agent
+
+Pick your agent below. Each config uses `uvx` to run the server directly from PyPI — no install step needed. Replace `YOUR_ABSOLUTE_PATH` with your actual home directory path (e.g., `/home/user` or `/Users/yourname`).
+
+#### Claude Code CLI
+
+```bash
+claude mcp add --transport stdio perplexity --scope user \
+  -e PERPLEXITY_COOKIES_PATH=$HOME/.config/perplexity/cookies.json \
+  -- uvx --from perplexity-subscription-mcp perplexity-mcp
+```
+
+Verify: `claude mcp list` · Remove: `claude mcp remove perplexity -s user`
+
+#### Augment CLI (Auggie)
+
+```bash
+auggie mcp add perplexity \
+  -e PERPLEXITY_COOKIES_PATH=$HOME/.config/perplexity/cookies.json \
+  -- uvx --from perplexity-subscription-mcp perplexity-mcp
+```
+
+Verify: `auggie mcp list` · Remove: `auggie mcp remove perplexity`
+
+#### Cursor IDE
+
+File: `~/.cursor/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "perplexity": {
+      "command": "uvx",
+      "args": ["--from", "perplexity-subscription-mcp", "perplexity-mcp"],
+      "env": {
+        "PERPLEXITY_COOKIES_PATH": "YOUR_ABSOLUTE_PATH/.config/perplexity/cookies.json"
+      }
+    }
+  }
+}
+```
+
+#### Windsurf IDE
+
+File: `~/.codeium/windsurf/mcp_config.json`
+
+```json
+{
+  "mcpServers": {
+    "perplexity": {
+      "command": "uvx",
+      "args": ["--from", "perplexity-subscription-mcp", "perplexity-mcp"],
+      "env": {
+        "PERPLEXITY_COOKIES_PATH": "YOUR_ABSOLUTE_PATH/.config/perplexity/cookies.json"
+      }
+    }
+  }
+}
+```
+
+#### OpenAI Codex CLI
+
+File: `~/.codex/config.toml`
+
+```toml
+[mcp_servers.perplexity]
+command = "uvx"
+args = ["--from", "perplexity-subscription-mcp", "perplexity-mcp"]
+
+[mcp_servers.perplexity.env]
+PERPLEXITY_COOKIES_PATH = "YOUR_ABSOLUTE_PATH/.config/perplexity/cookies.json"
+```
+
+#### VS Code with Continue Extension
+
+File: `.continue/config.json`
+
+```json
+{
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "uvx",
+          "args": ["--from", "perplexity-subscription-mcp", "perplexity-mcp"],
+          "env": {
+            "PERPLEXITY_COOKIES_PATH": "YOUR_ABSOLUTE_PATH/.config/perplexity/cookies.json"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+#### VS Code with Cline Extension
+
+```json
+{
+  "cline.mcpServers": {
+    "perplexity": {
+      "command": "uvx",
+      "args": ["--from", "perplexity-subscription-mcp", "perplexity-mcp"],
+      "env": {
+        "PERPLEXITY_COOKIES_PATH": "YOUR_ABSOLUTE_PATH/.config/perplexity/cookies.json"
+      }
+    }
+  }
+}
+```
+
+### Cookie Location Resolution
+
+If `PERPLEXITY_COOKIES_PATH` is not set, the server checks these locations in order:
+
+1. `PERPLEXITY_COOKIES_PATH` env var — explicit file path
+2. `PERPLEXITY_COOKIES` env var — inline JSON string (useful for CI/Docker)
+3. `~/.config/perplexity/cookies.json` — default user config location
+4. `./perplexity_cookies.json` — current working directory
 
 ## Features
 
@@ -43,9 +220,9 @@ This project enables programmatic access to Perplexity AI through:
 
 ### Sources
 
-- `web` - General web search (default)
-- `scholar` - Academic papers and research
-- `social` - Social media content
+- `web` — General web search (default)
+- `scholar` — Academic papers and research
+- `social` — Social media content
 
 ### Additional Features
 
@@ -54,225 +231,6 @@ This project enables programmatic access to Perplexity AI through:
 - **Thread management**: List and retrieve past conversation threads
 - **Incognito mode**: Search without saving to history
 - **File uploads**: Attach files to queries (Pro subscription)
-
-## Installation
-
-### Requirements
-
-- Python 3.13+
-- [uv](https://github.com/astral-sh/uv) (recommended) or pip
-
-### Setup
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/balakumardev/perplexity-web-wrapper.git
-   cd perplexity-web-wrapper
-   ```
-
-2. Install dependencies:
-   ```bash
-   uv sync
-   ```
-
-3. Set up your Perplexity cookies (see [Cookie Setup Guide](#cookie-setup-guide))
-
-## MCP Server Setup for Coding Agents
-
-The MCP server provides tools for AI coding assistants to search Perplexity AI directly.
-
-### Claude Code CLI
-
-```bash
-claude mcp add --transport stdio perplexity --scope user -- /path/to/perplexity-web-wrapper/.venv/bin/python -m mcp_server.server
-```
-
-**Verify installation:**
-```bash
-claude mcp list
-claude mcp get perplexity
-```
-
-**Remove:**
-```bash
-claude mcp remove perplexity -s user
-```
-
-### Augment CLI (Auggie)
-
-```bash
-auggie mcp add perplexity -- /path/to/perplexity-web-wrapper/.venv/bin/python -m mcp_server.server
-```
-
-**Verify installation:**
-```bash
-auggie mcp list
-```
-
-**Remove:**
-```bash
-auggie mcp remove perplexity
-```
-
-### Cursor IDE
-
-Configuration file: `~/.cursor/mcp.json`
-
-```json
-{
-  "mcpServers": {
-    "perplexity": {
-      "command": "/path/to/perplexity-web-wrapper/.venv/bin/python",
-      "args": ["-m", "mcp_server.server"],
-      "env": {}
-    }
-  }
-}
-```
-
-### Windsurf IDE
-
-Configuration file: `~/.codeium/windsurf/mcp_config.json`
-
-```json
-{
-  "mcpServers": {
-    "perplexity": {
-      "command": "/path/to/perplexity-web-wrapper/.venv/bin/python",
-      "args": ["-m", "mcp_server.server"],
-      "env": {}
-    }
-  }
-}
-```
-
-### OpenAI Codex CLI
-
-Configuration file: `~/.codex/config.toml`
-
-```toml
-[mcp_servers.perplexity]
-command = "/path/to/perplexity-web-wrapper/.venv/bin/python"
-args = ["-m", "mcp_server.server"]
-```
-
-### VS Code with Continue Extension
-
-Add to your Continue configuration (`.continue/config.json` or VS Code settings):
-
-```json
-{
-  "experimental": {
-    "modelContextProtocolServers": [
-      {
-        "transport": {
-          "type": "stdio",
-          "command": "/path/to/perplexity-web-wrapper/.venv/bin/python",
-          "args": ["-m", "mcp_server.server"]
-        }
-      }
-    ]
-  }
-}
-```
-
-### VS Code with Cline Extension
-
-Add to Cline's MCP settings in VS Code:
-
-```json
-{
-  "cline.mcpServers": {
-    "perplexity": {
-      "command": "/path/to/perplexity-web-wrapper/.venv/bin/python",
-      "args": ["-m", "mcp_server.server"]
-    }
-  }
-}
-```
-
-## Agent Instructions/Rules Configuration
-
-To help coding agents use the Perplexity MCP efficiently, add instructions to their global rules files.
-
-### Recommended Instructions
-
-Add the following to your agent's rules file:
-
-```markdown
-# Perplexity MCP - Web Research
-
-**Use Perplexity MCP instead of web search. Use fetch/WebFetch only when you need full page content.**
-
-| Tool | Use For |
-|------|---------|
-| `perplexity.search` | ALL web research - replaces web search |
-| `fetch` | Reading full page content in detail when needed |
-
-## Mode Selection
-
-| Research Type | Mode | Use Case |
-|--------------|------|----------|
-| Quick lookup | `auto` | Simple facts, definitions, quick answers |
-| Standard research | `pro` | API docs, library usage, best practices, debugging |
-| Deep research | `deep_research` | PRDs, design docs, comprehensive analysis |
-
-## Usage
-
-**Quick research:**
-perplexity.search(query="How to implement retry logic in Python", mode="pro", answer_only=true)
-
-**Deep research for PRDs/design:**
-perplexity.search(query="Best practices for microservices authentication 2025", mode="deep_research", answer_only=false)
-
-## When to Use Each Mode
-
-- **auto**: "What is X?", simple lookups, quick facts
-- **pro**: Technical questions, debugging, API research, implementation guidance
-- **deep_research**: Creating PRDs, design documents, competitive analysis, comprehensive guides
-```
-
-### Claude Code CLI
-
-**File:** `~/.claude/CLAUDE.md`
-
-Add the instructions above to your global CLAUDE.md file.
-
-### Augment CLI (Auggie)
-
-**Option 1: Rules file (recommended)**
-
-Create `~/.augment/rules/perplexity.md` with the instructions above.
-
-Then add to `~/.augment/settings.json`:
-```json
-{
-  "rules": [
-    "/path/to/.augment/rules/perplexity.md"
-  ]
-}
-```
-
-**Option 2: CLI flag**
-```bash
-auggie --rules ~/.augment/rules/perplexity.md "your instruction"
-```
-
-### Cursor IDE
-
-**File:** `~/.cursor/CURSOR_INSTRUCTIONS.md`
-
-Add the instructions above to your global Cursor instructions file.
-
-### Configuration File Locations Summary
-
-| Agent | MCP Config | Instructions/Rules |
-|-------|------------|-------------------|
-| Claude Code | `~/.claude.json` | `~/.claude/CLAUDE.md` |
-| Auggie | `~/.augment/settings.json` | `~/.augment/rules/*.md` + settings.json |
-| Cursor | `~/.cursor/mcp.json` | `~/.cursor/CURSOR_INSTRUCTIONS.md` |
-| Windsurf | `~/.codeium/windsurf/mcp_config.json` | Windsurf settings |
-| Codex CLI | `~/.codex/config.toml` | `~/.codex/config.toml` |
 
 ## MCP Tools Reference
 
@@ -286,8 +244,6 @@ Add the instructions above to your global Cursor instructions file.
 ### Tool Details
 
 #### search
-
-Search Perplexity AI with various modes and models.
 
 ```python
 # Example response with answer_only=True (default)
@@ -310,68 +266,67 @@ Search Perplexity AI with various modes and models.
 Continue a conversation using the `backend_uuid` from a previous response.
 
 ```python
-# Use the backend_uuid from search response
 follow_up(query="Can you elaborate on that?", backend_uuid="abc-123-def-456")
 ```
 
-#### list_threads
-
-Retrieve a list of conversation threads.
+#### list_threads / get_thread
 
 ```python
-# Returns list of threads with metadata (title, slug, timestamps)
 list_threads(limit=10, search_term="python")
-```
-
-#### get_thread
-
-Get full details of a specific thread including all messages.
-
-```python
-# Use the slug from list_threads
 get_thread(slug="thread-slug-here")
 ```
 
-## REST API (Optional)
+## Agent Instructions (Optional)
 
-Start the API server for HTTP access:
+To help coding agents use Perplexity MCP efficiently, add these instructions to your agent's rules file:
 
-```bash
-uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+```markdown
+# Perplexity MCP - Web Research
+
+**Use Perplexity MCP instead of web search. Use fetch/WebFetch only when you need full page content.**
+
+| Tool | Use For |
+|------|---------|
+| `perplexity.search` | ALL web research - replaces web search |
+| `fetch` | Reading full page content in detail when needed |
+
+## Mode Selection
+
+| Research Type | Mode | Use Case |
+|--------------|------|----------|
+| Quick lookup | `auto` | Simple facts, definitions, quick answers |
+| Standard research | `pro` | API docs, library usage, best practices, debugging |
+| Deep research | `deep_research` | PRDs, design docs, comprehensive analysis |
+
+## When to Use Each Mode
+
+- **auto**: "What is X?", simple lookups, quick facts
+- **pro**: Technical questions, debugging, API research, implementation guidance
+- **deep_research**: Creating PRDs, design documents, competitive analysis, comprehensive guides
 ```
 
-Access the interactive API documentation at `http://localhost:8000/docs`
-
-### Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/query_sync` | GET | Synchronous search, returns complete response |
-| `/api/query_async` | GET | Server-Sent Events (SSE) streaming response |
-| `/api/threads` | GET | List conversation threads |
-| `/api/threads/{slug}` | GET | Get thread details by slug |
-
-### Query Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `q` | string | required | Search query |
-| `mode` | string | `auto` | Search mode: `auto`, `pro`, `reasoning`, `deep_research` |
-| `model` | string | null | Specific model (depends on mode) |
-| `sources` | string | `web` | Comma-separated sources: `web`, `scholar`, `social` |
-| `answer_only` | bool | `false` | Return only answer text |
-| `backend_uuid` | string | null | UUID for follow-up queries |
-| `language` | string | `en-US` | Language code |
-| `incognito` | bool | `false` | Enable incognito mode |
+| Agent | Instructions File |
+|-------|------------------|
+| Claude Code | `~/.claude/CLAUDE.md` |
+| Auggie | `~/.augment/rules/perplexity.md` |
+| Cursor | `~/.cursor/CURSOR_INSTRUCTIONS.md` |
+| Codex CLI | `~/.codex/AGENTS.md` |
 
 ## Python Library Usage
 
+Install the package if using as a Python library:
+
+```bash
+pip install perplexity-subscription-mcp
+```
+
 ```python
-from lib.perplexity import Client
+from perplexity_subscription_mcp import Client
+from pathlib import Path
 import json
 
 # Load cookies
-with open("perplexity_cookies.json") as f:
+with open(Path.home() / ".config/perplexity/cookies.json") as f:
     cookies = json.load(f)
 
 # Initialize client
@@ -405,103 +360,46 @@ threads = client.get_threads(limit=10)
 thread_details = client.get_thread_details_by_slug("thread-slug")
 ```
 
-## Cookie Setup Guide
+## REST API (Optional — for development)
 
-Perplexity AI requires authentication cookies for API access. Here's how to obtain them:
+The REST API is not included in the PyPI package. To use it, clone the repo and install with the `api` extra:
 
-### Method 1: Browser Developer Tools
-
-1. Open [Perplexity AI](https://www.perplexity.ai) in your browser
-2. Log in to your account
-3. Open Developer Tools (F12 or right-click -> Inspect)
-4. Go to the **Application** tab (Chrome) or **Storage** tab (Firefox)
-5. Under **Cookies**, select `https://www.perplexity.ai`
-6. Copy all cookies and format them as JSON
-
-### Method 2: Cookie Export Extension
-
-1. Install a cookie export extension like [Cookie-Editor](https://cookie-editor.com/) or "EditThisCookie"
-2. Navigate to [Perplexity AI](https://www.perplexity.ai) and log in
-3. Click the extension and export cookies as JSON
-4. Save to `perplexity_cookies.json`
-
-### Cookie File Format
-
-The project accepts **two formats**:
-
-**1. Flat object (manual or custom export):**
-
-```json
-{
-  "session_token": "your_session_token_value",
-  "__cf_bm": "cloudflare_bot_management_token",
-  "__Secure-next-auth.session-token": "eyJ..."
-}
-```
-
-**2. [Cookie-Editor](https://cookie-editor.com/) / extension export (array of objects):**
-
-If you use [Cookie-Editor](https://cookie-editor.com/) or similar and export as JSON, you get an array. That format is supported as-is—save the exported file as `perplexity_cookies.json` and the wrapper will use it:
-
-```json
-[
-  {"domain": ".perplexity.ai", "name": "pplx.edge-vid", "value": "...", ...},
-  {"domain": "www.perplexity.ai", "name": "__Secure-next-auth.session-token", "value": "eyJ...", ...}
-]
-```
-
-Only the `name` and `value` fields from each object are used; other fields (domain, path, etc.) are ignored.
-
-Essential cookies typically include:
-- `session_token` or similar session identifier
-- Cloudflare tokens (`__cf_bm`, `cf_clearance`)
-
-**Note**: Cookie names and requirements may change. Export all cookies from your authenticated session for best results.
-
-### Cookie File Location
-
-The MCP server and API look for cookies in this order:
-
-1. `perplexity_cookies.json` in the project root
-2. Path specified by `PERPLEXITY_COOKIES_PATH` environment variable
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PERPLEXITY_COOKIES_PATH` | Custom path to cookies JSON file | `./perplexity_cookies.json` |
-
-Example:
 ```bash
-export PERPLEXITY_COOKIES_PATH="/path/to/my/cookies.json"
+git clone https://github.com/balakumardev/perplexity-web-wrapper.git
+cd perplexity-web-wrapper
+uv sync --extra api
+uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/query_sync` | GET | Synchronous search |
+| `/api/query_async` | GET | SSE streaming response |
+| `/api/threads` | GET | List conversation threads |
+| `/api/threads/{slug}` | GET | Get thread details by slug |
 
 ## Troubleshooting
 
-### Common Issues
+**"No cookies file found"**
+- Export cookies following the [setup guide](#2-get-your-perplexity-cookies) above
+- Verify the file exists: `cat ~/.config/perplexity/cookies.json`
+- Check your MCP config has `PERPLEXITY_COOKIES_PATH` set correctly
 
 **"No remaining pro queries"**
-- Your Perplexity Pro subscription may have reached its query limit
-- Use `mode="auto"` for unlimited free searches
-
-**"No cookies file found"**
-- Ensure `perplexity_cookies.json` exists in the project root
-- Or set `PERPLEXITY_COOKIES_PATH` environment variable
+- Your Pro subscription may have hit its limit. Use `mode="auto"` for free searches.
 
 **"Invalid model for the selected mode"**
-- Check the model compatibility table above
-- Some models are only available in specific modes
+- Check the [model compatibility table](#available-models). Some models only work in specific modes.
 
 **Connection or authentication errors**
-- Re-export cookies from your browser (they expire)
-- Ensure you're logged into Perplexity AI when exporting
+- Cookies expire periodically. Re-export from your browser and replace the file.
+- Make sure you're logged in to Perplexity when exporting cookies.
 
 ## Notes
 
 - This is an **unofficial** project and not affiliated with Perplexity AI
 - Respect Perplexity AI's terms of service and rate limits
-- For production use, secure your cookies and restrict CORS appropriately
-- Cookie sessions may expire and require periodic refresh
+- Cookie sessions expire periodically — re-export when you get auth errors
 
 ## License
 

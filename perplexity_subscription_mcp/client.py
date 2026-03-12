@@ -26,7 +26,9 @@ class Client:
     A client for interacting with the Perplexity AI API.
     """
 
-    def __init__(self, cookies={}):
+    def __init__(self, cookies=None):
+        if cookies is None:
+            cookies = {}
         cookies = normalize_cookies(cookies)
         # Initialize an HTTP session with default headers and optional cookies
         self.session = requests.Session(
@@ -69,8 +71,8 @@ class Client:
         query,
         mode="auto",
         model=None,
-        sources=["web"],
-        files={},
+        sources=None,
+        files=None,
         stream=False,
         language="en-US",
         follow_up=None,
@@ -90,6 +92,11 @@ class Client:
         - follow_up: Information for follow-up queries.
         - incognito: Whether to enable incognito mode.
         """
+        if sources is None:
+            sources = ["web"]
+        if files is None:
+            files = {}
+
         # Validate input parameters
         assert mode in ["auto", "pro", "reasoning", "deep research"], (
             "Invalid search mode."

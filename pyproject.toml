@@ -1,22 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "perplexity-web-wrapper"
+name = "perplexity-subscription-mcp"
 version = "0.1.0"
-description = "Unofficial wrapper for Perplexity AI's web interface."
+description = "MCP server and Python client for Perplexity AI using your existing subscription — no API costs."
 readme = "README.md"
-requires-python = ">=3.13"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Bala Kumar", email = "mail@balakumar.dev" },
+]
+keywords = ["perplexity", "mcp", "ai", "search", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "curl-cffi>=0.11.3",
-    "fastapi>=0.115.12",
     "mcp>=1.0.0",
-    "uvicorn>=0.34.3",
-    "websocket-client>=1.8.0",
 ]
 
+[project.optional-dependencies]
+api = [
+    "fastapi>=0.115.12",
+    "uvicorn>=0.34.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/balakumardev/perplexity-web-wrapper"
+Repository = "https://github.com/balakumardev/perplexity-web-wrapper"
+Issues = "https://github.com/balakumardev/perplexity-web-wrapper/issues"
+
 [project.scripts]
-perplexity-mcp = "mcp_server.server:main"
+perplexity-mcp = "perplexity_subscription_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["perplexity_subscription_mcp"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "perplexity_subscription_mcp/",
+    "LICENSE",
+    "README.md",
+    "pyproject.toml",
+]
 
 [tool.uv]
 package = true
-
-[tool.setuptools.packages.find]
-include = ["lib*", "api*", "mcp_server*"]

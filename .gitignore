@@ -3,4 +3,7 @@ __pycache__
 .venv
 logs
 perplexity_cookies.json
+perplexity_cookies.json.bk
 *.egg-info
+dist/
+build/
