@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "perplexity-subscription-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "MCP server and Python client for Perplexity AI using your existing subscription — no API costs."
 readme = "README.md"
 license = "MIT"
