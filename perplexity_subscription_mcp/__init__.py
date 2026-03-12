@@ -3,4 +3,4 @@
 from perplexity_subscription_mcp.client import Client, normalize_cookies
 
 __all__ = ["Client", "normalize_cookies"]
-__version__ = "0.1.1"
+__version__ = "0.1.2"
