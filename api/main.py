@@ -13,7 +13,8 @@ from .utils import extract_answer, save_resp
 # Initialize Perplexity client
 try:
     with open("perplexity_cookies.json", "r", encoding="utf-8") as f:
-        perplexity_cookies = json.load(f)
+        raw = json.load(f)
+    perplexity_cookies = perplexity.normalize_cookies(raw)
 except (FileNotFoundError, json.JSONDecodeError):
     print("Cookies file not found or invalid. Using empty cookies.")
     perplexity_cookies = {}

@@ -15,7 +15,7 @@ from mcp.server.fastmcp import FastMCP
 
 # Add parent directory to path for lib imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from lib.perplexity import Client
+from lib.perplexity import Client, normalize_cookies
 
 # Initialize FastMCP server
 mcp = FastMCP("Perplexity AI")
@@ -49,7 +49,7 @@ def get_client() -> Client:
         if cookies_path.exists():
             try:
                 with open(cookies_path, "r", encoding="utf-8") as f:
-                    cookies = json.load(f)
+                    cookies = normalize_cookies(json.load(f))
             except (json.JSONDecodeError, IOError) as e:
                 print(f"Warning: Failed to load cookies from {cookies_path}: {e}", file=sys.stderr)
         else:

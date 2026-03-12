@@ -7,12 +7,27 @@ from uuid import uuid4
 from curl_cffi import requests, CurlMime
 
 
+def normalize_cookies(cookies):
+    """
+    Accept cookies in either format:
+    - Flat dict: {"cookie_name": "cookie_value", ...} (project format)
+    - Cookie Editor format: [{"name": "...", "value": "...", ...}, ...]
+    Returns a flat dict suitable for requests.Session(cookies=...).
+    """
+    if isinstance(cookies, list):
+        return {item["name"]: item["value"] for item in cookies if isinstance(item, dict) and "name" in item and "value" in item}
+    if isinstance(cookies, dict):
+        return cookies
+    return {}
+
+
 class Client:
     """
     A client for interacting with the Perplexity AI API.
     """
 
     def __init__(self, cookies={}):
+        cookies = normalize_cookies(cookies)
         # Initialize an HTTP session with default headers and optional cookies
         self.session = requests.Session(
             headers={

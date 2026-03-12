@@ -420,24 +420,39 @@ Perplexity AI requires authentication cookies for API access. Here's how to obta
 
 ### Method 2: Cookie Export Extension
 
-1. Install a cookie export extension like "EditThisCookie" or "Cookie-Editor"
+1. Install a cookie export extension like [Cookie-Editor](https://cookie-editor.com/) or "EditThisCookie"
 2. Navigate to [Perplexity AI](https://www.perplexity.ai) and log in
 3. Click the extension and export cookies as JSON
 4. Save to `perplexity_cookies.json`
 
 ### Cookie File Format
 
-Create `perplexity_cookies.json` in the project root:
+The project accepts **two formats**:
+
+**1. Flat object (manual or custom export):**
 
 ```json
 {
   "session_token": "your_session_token_value",
   "__cf_bm": "cloudflare_bot_management_token",
-  "cf_clearance": "cloudflare_clearance_token"
+  "__Secure-next-auth.session-token": "eyJ..."
 }
 ```
 
-The essential cookies typically include:
+**2. [Cookie-Editor](https://cookie-editor.com/) / extension export (array of objects):**
+
+If you use [Cookie-Editor](https://cookie-editor.com/) or similar and export as JSON, you get an array. That format is supported as-is—save the exported file as `perplexity_cookies.json` and the wrapper will use it:
+
+```json
+[
+  {"domain": ".perplexity.ai", "name": "pplx.edge-vid", "value": "...", ...},
+  {"domain": "www.perplexity.ai", "name": "__Secure-next-auth.session-token", "value": "eyJ...", ...}
+]
+```
+
+Only the `name` and `value` fields from each object are used; other fields (domain, path, etc.) are ignored.
+
+Essential cookies typically include:
 - `session_token` or similar session identifier
 - Cloudflare tokens (`__cf_bm`, `cf_clearance`)
 
