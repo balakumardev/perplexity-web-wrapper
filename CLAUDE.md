@@ -33,23 +33,26 @@ api/                           # REST API (NOT published, local dev only)
 - Build system: **hatchling**
 - Package manager: **uv**
 - Python: `>=3.10`
-- PyPI token: set as `UV_PUBLISH_TOKEN` in `~/.zshrc`
+
+### CI/CD (automatic)
+
+Every push to `main`/`master` triggers `.github/workflows/publish.yml`:
+1. Auto-bumps patch version (0.1.1 → 0.1.2)
+2. Updates version in `pyproject.toml` and `__init__.py`
+3. Commits `v0.1.2 [skip ci]` and creates git tag
+4. Builds and publishes to PyPI
+
+The `[skip ci]` in the version bump commit prevents infinite loops. PyPI token is stored as `UV_PUBLISH_TOKEN` GitHub Actions secret.
+
+**To set major/minor version**: manually edit version in `pyproject.toml` + `__init__.py`, push — CI will bump patch from there.
+
+### Manual (local)
 
 ```bash
-# Build
 rm -rf dist && uv build
-
-# Validate
 uvx twine check dist/*
-
-# Publish
-uv publish
-
-# Test from PyPI
-uvx --from perplexity-subscription-mcp python -c "from perplexity_subscription_mcp import Client; print('OK')"
+uv publish  # uses UV_PUBLISH_TOKEN from ~/.zshrc
 ```
-
-**After publishing**: bump version in both `pyproject.toml` and `perplexity_subscription_mcp/__init__.py`.
 
 ## Dependencies
 
